@@ -10,6 +10,7 @@ Jawab 3 pertanyaan berikut dengan tepat:
 
   3. Untuk bidang code/computer program analysis: jelaskan apa itu memory corruption. Sebutkan salah satu attack vector-nya, bagaimana teknik serangannya, dan juga cara mencegahnya.
 
+
 ## Jawaban 
 
 ### Cross-Site Scripting (XSS) 
@@ -61,7 +62,7 @@ Beberapa hal yang dapat dilakukan sebagai langkah pencegahan terhadap serangan X
  
      Mengetahui jenis data apa yang dimiliki (misalnya, HTML, teks biasa, atau JSON). Pilih fungsi filter yang tepat berdasarkan detail ini.
 
-     ** HTML escaping**
+     **HTML escaping**
        
        a. Manual
 
@@ -88,18 +89,49 @@ Beberapa hal yang dapat dilakukan sebagai langkah pencegahan terhadap serangan X
        ```
        
        Kali ini, peramban tidak akan menafsirkan tag `<script>` sebagai konteks JavaScript, dan sebagai gantinya hanya menampilkan string asli di halaman.
+       
+     **JavaScript escaping**
+     
+     Teknik escape menggunakan JavaScript
+     
+     ```
+     <%! from js_utils import js_escaped_string %>
+     ...
+     <script type="text/javascript">
+        var lastName = "${last_name | n, js_escaped_string}";
+        ...
+      </script>
+     ```
+     
+     Kode di atas akan menghasilkan kode sumber halaman yang aman sebagai berikut:
+     
+     ```
+     <script type="text/javascript">
+       var lastName = "\u0022\u003Balert(\u0027XSS attack!\u0027)\u003B\u0022\u0022\u003B";
+       ...
+     </script>
+     
+     ```
   
   2. Selalu melakukan validasi terhadap masukan dari pengguna
      
      Mekanisme pertahanan ini sangat berguna untuk menangkal serangan XSS khususnya tipe reflected XSS.
+
+     ```
+     raise ValidationError([
+         ValidationError(_('Error 1'), code='error1'),
+         ValidationError(_('Error 2'), code='error2'),
+      ])
+     ```
 
   3. Tidak mengizinkan pengguna untuk memasukkan data yang akan ditampilkan kembali tanpa adanya validasi tambahan.
      
      Serangan stored XSS terjadi saat pengguna diizinkan untuk memasukkan data yang akan ditampilkan kembali. Contohnya adalah pada message board, buku tamu, dll. Penyerang memasukkan kode HTML atau client script code lainnya pada posting mereka.          
   
   4. Menggunakan *security encoding libraries* misalnya:
-     *  python-xss-filter 
-     *  xss-catcher
+     * [python-xss-filter](https://github.com/phith0n/python-xss-filter) 
+     * [xss-catcher](https://github.com/bannsec/xss_catcher)
+     
 ___
 ### Cross-Site Request Forgery (CSRF)
 
@@ -138,27 +170,53 @@ User salah satu e-commerce di Indonesia yaitu Bukalapak diarahkan oleh penjual n
 
 Script **verifikasi.php** akan mengirimkan data login berupa username dan password yang diisikan oleh korban ke form ke dalam database milik penyerang.
 
+
 #### Proteksi terhadap CSRF 
 
-Proteksi dilakukan dengan menambahkan template tag `{% csrf_token %}` pada halaman yang memuat form isian. 
+Langkah pencegahan terhadap serangan CSRF antara lain:
 
-**templates/login.html**
-```
-<form action="{% url "login" %}" method="post" accept-charset="utf-8">
+  1. Menggunakan teknik `tokenizing`
+
+     Proteksi dilakukan dengan menambahkan template tag `{% csrf_token %}` pada halaman yang memuat form isian. 
+
+     **templates/login.html**
   
-{% csrf_token %}   
-<input type="hidden" name="next" value="{{ next }}"> 
-<button type="submit" class="btn btn-primary">Login</button> 
+     ```
+      <form action="{% url "login" %}" method="post" accept-charset="utf-8">
+  
+     {% csrf_token %}   
+       <input type="hidden" name="next" value="{{ next }}"> 
+       <button type="submit" class="btn btn-primary">Login</button> 
 
-</form>
-```
+     </form>
+     ```
 
-Token tersebut akan ditampilkan dalam HTML seperti yang ditunjukkan di bawah ini, dengan nilai yang khusus untuk pengguna di peramban.
+     Token tersebut akan ditampilkan dalam HTML seperti yang ditunjukkan di bawah ini, dengan nilai yang khusus untuk pengguna di peramban.
 
-```
-<input type='hidden' name='csrfmiddlewaretoken' value='0QRWHnYVg776y2l66mcvZqp8alrv4lb8S8lZ4ZJUWGZFA5VHrVfL2mpH29YZ39PW' />
-```
+     ```
+     <input type='hidden' name='csrfmiddlewaretoken' value='0QRWHnYVg776y2l66mcvZqp8alrv4lb8S8lZ4ZJUWGZFA5VHrVfL2mpH29YZ39PW' />
+     ```
 
+  2. Pengaktifan hash(hashing) terhadap semua form (session id, function name, server-side secret).
+  
+     ```python
+     
+     class AccountCreateView(FormView):
+     
+     form_class = AccountCreateForm
+   
+        def form_valid(self, form):       
+        hashed_secret = myHashfunction(unhashed_secret)
+        user = self.request.user   # current session user
+
+        Account.objects.create(
+            user=user,
+            secret=hashed_secret,
+        )
+
+        return super(AccountCreateView,self).form_valid(form)
+     ```
+___
 ### XSS vs CSRF
 
 Beberapa perbedaan antara CSRF dan XSS adalah:
@@ -169,25 +227,43 @@ Beberapa perbedaan antara CSRF dan XSS adalah:
   
   * Dalam kasus XSS, ketika server tidak memvalidasi atau meloloskan masukan sebagai kontrol utama, penyerang dapat mengirim masukan melalui parameter permintaan atau jenis bidang masukan sisi klien (yang dapat berupa cookie, kolom formulir atau url params). Masukan ilegal tersebut selanjutnya dapat ditampilkan kembali ke antarmuka, disimpan dalam database atau dijalankan dari jarak jauh. 
   
+  
 ___
 ### Touchlinking comissioning attacks
 
 Beberapa bentuk serangan touchlinking comissioning:
 
  * Reset perangkat ke seting awal dari pabrikan (Factory-New reset)
+ * Penggantian nomor saluran
  * Diskoneksi permanen
- * Hijack
  * Network Key Extraction
 
 #### Teknik touchlinking comissioning attacks
 
 Langkah-langkah serangan touchlinking comissioning
 
-  * Mencari nomor saluran perangkat target
+  * Mencari nomor saluran perangkat target (scanning)
 
     Tujuan awal penyerang adalah untuk mengidentifikasi saluran yang digunakan oleh perangkat target untuk berkomunikasi. Perangkat IoT seperti ZigBee menggunakan total 16 saluran dari pita 2,4 GHz untuk komunikasi.
 
-  * Dumping paket 
+    **Scanning**
+
+    Contoh *scanning* menggunakan framework [Z3sec](https://github.com/IoTsec/Z3sec)
+
+    ```
+    z3sec_touchlink --sdr -c all scan
+    ```
+    
+    Jika disekitar gawai scanner terdapat perangkat touchlink-enabled maka hasilnya:
+
+    ```
+    Scan responses overview:
+    # |RSSI |channel |src_pan_id |src_addr                |
+    =======================================================
+    0 |0    |12      |0xe21      |00:17:88:01:10:4f:44:e8 |
+    ```
+    
+  * Menangkap paket 
 
     Setelah penyerang berhasil mengidentifikasi saluran, misalkan saluran nomor 12, langkah berikutnya adalah menangkap paket yang dikirim dan diterima oleh perangkat.
 
@@ -195,13 +271,17 @@ Langkah-langkah serangan touchlinking comissioning
 
     Sekarang penyerang itu telah berhasil menangkap paket saat melakukan tindakan menggunakan aplikasi seluler, dia dapat memutar ulang paket untuk melakukan apa yang disebut sebagai serangan replay.
 
+
 ### Deteksi:
 
-Deteksi dapat dilakukan dengan menggunakan *penetration testing* framework **Z3sec** untuk mengevaluasi keamanan perangkat IoT, misalnya zigbee.
+Deteksi dapat dilakukan dengan menggunakan beberapa *penetration testing framework*  untuk mengevaluasi keamanan perangkat IoT, misalnya protokol zigbee. Tool tersebut antara lain:
 
+  * [Z3sec](https://github.com/IoTsec/Z3sec) 
+  * [Attify](https://github.com/attify/Attify-Zigbee-Framework)
+  * [killerbee](https://github.com/riverloopsec/killerbee/)
 
 ----     
-### Memory corruption
+### Memory Corruption
 
 **Memory corruption** adalah kerusakan memori akibat kesalahan penggunaan alokasi (segmentasi) memori pada program. Hal ini terjadi saat lokasi memori dimodifikasi akibat dari perilaku program berbeda dari konstruksi program asli, misalnya penulisan masukan(input) yang berlebihan ke dalam buffer memory.
 
@@ -244,51 +324,57 @@ int main () {
 
 #### Pencegahan terhadap memory corruption
 
-Gunakan fungsi setara yang aman, yang memeriksa panjang buffer(bounds checking), yaitu:
+  1. Gunakan fungsi setara yang aman, yang memeriksa panjang buffer(bounds checking), yaitu:
 
-  1.  `gets()` -> `fgets()`
-  2.  `strcpy()` -> `strncpy()`
-  3.  `strcat()` -> `strncat()`
-  4.  `sprintf()` -> `snprintf()`
+     * `gets()` -> `fgets()`
+     * `strcpy()` -> `strncpy()`
+     * `strcat()` -> `strncat()`
+     * `sprintf()` -> `snprintf()`
 
-Contoh listing program di atas dapat dibuat menjadi lebih aman dari serangan BO dengan penggunaan fungsi yang lebih aman, dan pendefinisian panjang buffer.
+     Contoh listing program di atas dapat dibuat menjadi lebih aman dari serangan BO dengan penggunaan fungsi yang lebih aman, dan pendefinisian panjang buffer.
 
-```
-#include <stdio.h> 
-#include <stdlib.h> 
-#define LENGTH 8 
-int main () {
-     char* userid, *nlptr;     
-     int allow = 0;       
-     userid = malloc(LENGTH * sizeof(*userid));     
-     if (!userid)         
-         return EXIT_FAILURE;     
-     printf external link("Enter your userid, please: ");     
-     fgets(userid,LENGTH, stdin);     
-     nlptr = strchr(userid, '\n');     
-     if (nlptr) *nlptr = '\0'; 
+     ```
+     #include <stdio.h> 
+     #include <stdlib.h> 
+     #define LENGTH 8 
+     int main () {
+         char* userid, *nlptr;     
+         int allow = 0;       
+         userid = malloc(LENGTH * sizeof(*userid));     
+         if (!userid)         
+             return EXIT_FAILURE;     
+         printf external link("Enter your userid, please: ");     
+         fgets(userid,LENGTH, stdin);     
+         nlptr = strchr(userid, '\n');     
+         if (nlptr) *nlptr = '\0'; 
 
-     if (grantAccess(userid)) {         
-        allow = 1;     
-       }     
-     if (allow != 0) {         
-        priviledgedAction();
-       }       
-         
-       free(userid);       
-       return 0; 
-     
-     } 
-```
+         if (grantAccess(userid)) {         
+            allow = 1;     
+           }     
+         if (allow != 0) {         
+            priviledgedAction();
+           }       
 
-Melakukan tindakan kontrol keamanan memori yang dapat digunakan untuk mencegah kerentanan korupsi-memori, misalnya: 
+           free(userid);       
+           return 0; 
 
-  * Memanfaatkan flag compiler yang aman seperti -fPIE, -fstack-protector-all, -Wl, -z, noexecstack, -Wl, -z, noexecheap.
+         } 
+     ```
 
-  * Menggunakan sistem-on-chip (SoC) dan mikrokontroler (MCU) yang berisi unit manajemen memori (MMU). MMU mengisolasi thread dan proses untuk mengurangi permukaan serangan jika bug memori dieksploitasi.
+  2. Penggunaan [libsafe](https://github.com/tagatac/libsafe-CVE-2005-1125)
 
-  * Menggunakan sistem-on-chip (SoC) dan mikrokontroler (MCU) yang berisi unit perlindungan memori (MPU). MPU memberlakukan aturan akses untuk memori dan proses terpisah serta menegakkan aturan-aturan khusus.
-   
-  * Jika tidak ada MMU atau MPU yang tersedia, pantau tumpukan (stack) menggunakan bit yang diketahui untuk memantau berapa banyak tumpukan yang sedang digunakan dengan menentukan berapa banyak tumpukan tidak lagi mengandung bit yang diketahui.
-   
-  * Menggunakan teknik *Address Space Layout Randomization* (ASLR). ASLR secara acak mengatur posisi ruang alamat dari area data utama dari suatu proses, termasuk dasar dari eksekusi dan posisi tumpukan, tumpukan dan pustaka.
+  3. Melakukan tindakan kontrol keamanan memori yang dapat digunakan untuk mencegah kerentanan korupsi-memori, misalnya: 
+
+     * Memanfaatkan flag compiler yang aman seperti -fPIE, -fstack-protector-all, -Wl, -z, noexecstack, -Wl, -z, noexecheap.
+     * Menggunakan sistem-on-chip (SoC) dan mikrokontroler (MCU) yang berisi unit manajemen memori (MMU). MMU mengisolasi thread dan proses untuk mengurangi permukaan serangan jika bug memori dieksploitasi.
+     * Menggunakan sistem-on-chip (SoC) dan mikrokontroler (MCU) yang berisi unit perlindungan memori (MPU). MPU memberlakukan aturan akses untuk memori dan proses terpisah serta menegakkan aturan-aturan khusus.   
+     * Jika tidak ada MMU atau MPU yang tersedia, pantau tumpukan (stack) menggunakan bit yang diketahui untuk memantau berapa banyak tumpukan yang sedang digunakan dengan menentukan berapa banyak tumpukan tidak lagi mengandung bit yang diketahui.   
+     * Menggunakan teknik *Address Space Layout Randomization* (ASLR). ASLR secara acak mengatur posisi ruang alamat dari area data utama dari suatu proses, termasuk dasar dari eksekusi dan posisi tumpukan, tumpukan dan pustaka.
+
+___
+### Referensi
+  * https://www.owasp.org/index.php/Cross-site_Scripting_(XSS)
+  * https://www.owasp.org/index.php/Cross-Site_Request_Forgery_(CSRF)
+  * https://github.com/IoTsec/Z3sec/wiki
+  * https://www.owasp.org/index.php/Buffer_Overflows
+  * https://directory.fsf.org/wiki/Libsafe
